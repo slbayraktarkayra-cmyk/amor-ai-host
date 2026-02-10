@@ -16,7 +16,6 @@ app.post("/chat", async (req, res) => {
       (typeof body.message === "string" && body.message.trim()) ||
       (typeof body.prompt === "string" && body.prompt.trim()) ||
       "";
-
   
     const speakerName =
       (typeof body.speakerName === "string" && body.speakerName.trim()) ||
