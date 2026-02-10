@@ -1,8 +1,6 @@
 // =====================================================
 // amor-ai-host (Gemini Bridge) - server.js
-// - POST /chat  -> returns plain text reply
-// - GET /       -> OK
-// Creator: Kayra Bayraktar (integration target)
+// Creator: Kayra Bayraktar
 // =====================================================
 
 import express from "express";
@@ -13,6 +11,39 @@ app.use(cors());
 app.use(express.json({ limit: "1mb" }));
 
 app.get("/", (req, res) => res.status(200).send("OK"));
+
+// Debug: list available models (to verify what your key can access)
+app.get("/models", async (req, res) => {
+  try {
+    const apiKey = process.env.GOOGLE_API_KEY;
+    if (!apiKey) return res.status(200).send("⚠️ GOOGLE_API_KEY ayarlı değil.");
+
+    const url = `https://generativelanguage.googleapis.com/v1/models?key=${apiKey}`;
+    const r = await fetch(url);
+    const data = await r.json();
+
+    if (!r.ok) {
+      const msg =
+        (data && (data.error?.message || JSON.stringify(data.error))) ||
+        "unknown";
+      return res.status(200).send(`⚠️ LISTMODELS ${r.status}: ${msg}`.slice(0, 1000));
+    }
+
+    // Keep it short
+    const names =
+      data && data.models
+        ? data.models
+            .map((m) => m.name)
+            .filter(Boolean)
+            .slice(0, 50)
+            .join("\n")
+        : "no models";
+
+    return res.status(200).send(names);
+  } catch (e) {
+    return res.status(200).send("⚠️ LISTMODELS crash");
+  }
+});
 
 app.post("/chat", async (req, res) => {
   try {
@@ -36,6 +67,9 @@ app.post("/chat", async (req, res) => {
     const apiKey = process.env.GOOGLE_API_KEY;
     if (!apiKey) return res.status(200).send("⚠️ GOOGLE_API_KEY ayarlı değil.");
 
+    // ✅ Use stable v1 endpoint
+    const model = process.env.GEMINI_MODEL || "gemini-1.5-flash";
+
     const systemPrompt =
       `You are the venue host of "${venue}" in Second Life. ` +
       `Reply in ${lang}. ` +
@@ -44,20 +78,19 @@ app.post("/chat", async (req, res) => {
 
     const finalPrompt = `${systemPrompt}\n${speakerName}: ${text}`;
 
-    const resp = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: finalPrompt }] }],
-        }),
-      }
-    );
+    const url = `https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`;
+
+    const resp = await fetch(url, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text: finalPrompt }] }],
+      }),
+    });
 
     const data = await resp.json();
 
-    // ✅ IMPORTANT: show Gemini error details back to SL (instead of 🙂)
+    // Show Gemini errors directly back to SL
     if (!resp.ok) {
       const msg =
         (data && (data.error?.message || JSON.stringify(data.error))) ||
