@@ -1,3 +1,10 @@
+// =====================================================
+// amor-ai-host (Gemini Bridge) - server.js
+// - POST /chat  -> returns plain text reply
+// - GET /       -> OK
+// Creator: Kayra Bayraktar (integration target)
+// =====================================================
+
 import express from "express";
 import cors from "cors";
 
@@ -50,8 +57,26 @@ app.post("/chat", async (req, res) => {
 
     const data = await resp.json();
 
+    // ✅ IMPORTANT: show Gemini error details back to SL (instead of 🙂)
+    if (!resp.ok) {
+      const msg =
+        (data && (data.error?.message || JSON.stringify(data.error))) ||
+        "unknown";
+      return res
+        .status(200)
+        .send(`⚠️ GEMINI ${resp.status}: ${msg}`.slice(0, 220));
+    }
+
     const reply =
-      data?.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "🙂";
+      data &&
+      data.candidates &&
+      data.candidates[0] &&
+      data.candidates[0].content &&
+      data.candidates[0].content.parts &&
+      data.candidates[0].content.parts[0] &&
+      data.candidates[0].content.parts[0].text
+        ? String(data.candidates[0].content.parts[0].text).trim()
+        : "🙂";
 
     return res.status(200).send(reply);
   } catch (err) {
