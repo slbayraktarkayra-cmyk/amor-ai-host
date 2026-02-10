@@ -1,5 +1,5 @@
-import express from "express";
-import cors from "cors";
+const express = require("express");
+const cors = require("cors");
 
 const app = express();
 app.use(cors());
@@ -16,7 +16,7 @@ app.post("/chat", async (req, res) => {
       (typeof body.message === "string" && body.message.trim()) ||
       (typeof body.prompt === "string" && body.prompt.trim()) ||
       "";
-  
+
     const speakerName =
       (typeof body.speakerName === "string" && body.speakerName.trim()) ||
       "Visitor";
@@ -64,7 +64,9 @@ app.post("/chat", async (req, res) => {
     return res.status(200).send(reply);
   } catch (err) {
     console.error("CHAT_ERROR:", err);
-    return res.status(200).send("Şu an kısa bir aksaklık var, birazdan tekrar deneyelim.");
+    return res
+      .status(200)
+      .send("Şu an kısa bir aksaklık var, birazdan tekrar deneyelim.");
   }
 });
 
